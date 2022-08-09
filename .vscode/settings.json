@@ -1,0 +1,13 @@
+{
+  "C_Cpp.intelliSenseEngine": "Tag Parser",
+  "files.associations": {
+    "rgb_led.h": "c",
+    "task.h": "c",
+    "esp_log.h": "c",
+    "http_server.h": "c",
+    "esp_http_server.h": "c"
+  },
+  "idf.flashType": "UART",
+  "idf.portWin": "COM3",
+  "idf.adapterTargetName": "esp32"
+}
