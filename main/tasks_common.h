@@ -1,6 +1,9 @@
 #ifndef MAIN_TASKS_COMMON_H_
 #define MAIN_TASKS_COMMON_H_
 
+/** Core 0
+*Priority task
+*/
 // WiFi application task
 #define WIFI_APP_TASK_STACK_SIZE			4096
 #define WIFI_APP_TASK_PRIORITY				5
@@ -16,6 +19,13 @@
 #define HTTP_SERVER_MONITOR_PRIORITY		3
 #define HTTP_SERVER_MONITOR_CORE_ID			0
 
+/** Core 1
+*Priority task
+*/
+// DHT Sensor task
+#define DHT_TASK_STACK_SIZE				    4096
+#define DHT_TASK_PRIORITY					5
+#define DHT_TASK_CORE_ID					1
 
 
 #endif /* MAIN_TASKS_COMMON_H_ */
