@@ -1,3 +1,9 @@
-idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c
+idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c app_nvs.c
                     INCLUDE_DIRS "."
-                    EMBED_FILES webpage/app.css webpage/app.js webpage/favicon.ico webpage/index.html webpage/jquery-3.3.1.min.js)
+                    EMBED_FILES 
+                    webpage/app.css 
+                    webpage/app.js 
+                    webpage/favicon.ico 
+                    webpage/index.html 
+                    webpage/jquery-3.3.1.min.js
+                    )
