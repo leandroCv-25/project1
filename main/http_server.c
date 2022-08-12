@@ -1,6 +1,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_wifi.h"
 #include "sys/param.h"
 
 #include "DHT_task.h"
@@ -48,7 +49,6 @@ extern const uint8_t app_js_start[]					asm("_binary_app_js_start");
 extern const uint8_t app_js_end[]					asm("_binary_app_js_end");
 extern const uint8_t favicon_ico_start[]			asm("_binary_favicon_ico_start");
 extern const uint8_t favicon_ico_end[]				asm("_binary_favicon_ico_end");
-
 /**
  * Checks the g_fw_update_status and creates the fw_update_reset timer if g_fw_update_status is true.
  */
@@ -82,42 +82,42 @@ static void http_server_monitor(void *parameter)
 		{
 			switch (msg.msgID)
 			{
-				case HTTP_MSG_WIFI_CONNECT_INIT:
-					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_INIT");
+			case HTTP_MSG_WIFI_CONNECT_INIT:
+				ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_INIT");
 
-					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECTING;
+				g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECTING;
 
-					break;
+				break;
 
-				case HTTP_MSG_WIFI_CONNECT_SUCCESS:
-					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_SUCCESS");
+			case HTTP_MSG_WIFI_CONNECT_SUCCESS:
+				ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_SUCCESS");
 
-					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_SUCCESS;
+				g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_SUCCESS;
 
-					break;
+				break;
 
-				case HTTP_MSG_WIFI_CONNECT_FAIL:
-					ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_FAIL");
+			case HTTP_MSG_WIFI_CONNECT_FAIL:
+				ESP_LOGI(TAG, "HTTP_MSG_WIFI_CONNECT_FAIL");
 
-					g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_FAILED;
+				g_wifi_connect_status = HTTP_WIFI_STATUS_CONNECT_FAILED;
 
-					break;
+				break;
 
-				case HTTP_MSG_OTA_UPDATE_SUCCESSFUL:
-					ESP_LOGI(TAG, "HTTP_MSG_OTA_UPDATE_SUCCESSFUL");
-					g_fw_update_status = OTA_UPDATE_SUCCESSFUL;
-					http_server_fw_update_reset_timer();
+			case HTTP_MSG_OTA_UPDATE_SUCCESSFUL:
+				ESP_LOGI(TAG, "HTTP_MSG_OTA_UPDATE_SUCCESSFUL");
+				g_fw_update_status = OTA_UPDATE_SUCCESSFUL;
+				http_server_fw_update_reset_timer();
 
-					break;
+				break;
 
-				case HTTP_MSG_OTA_UPDATE_FAILED:
-					ESP_LOGI(TAG, "HTTP_MSG_OTA_UPDATE_FAILED");
-					g_fw_update_status = OTA_UPDATE_FAILED;
+			case HTTP_MSG_OTA_UPDATE_FAILED:
+				ESP_LOGI(TAG, "HTTP_MSG_OTA_UPDATE_FAILED");
+				g_fw_update_status = OTA_UPDATE_FAILED;
 
-					break;
+				break;
 
-				default:
-					break;
+			default:
+				break;
 			}
 		}
 	}
@@ -288,7 +288,14 @@ esp_err_t http_server_OTA_update_handler(httpd_req_t *req)
 	}
 
 	// We won't update the global variables throughout the file, so send the message about the status
-	if (flash_successful) { http_server_monitor_send_message(HTTP_MSG_OTA_UPDATE_SUCCESSFUL); } else { http_server_monitor_send_message(HTTP_MSG_OTA_UPDATE_FAILED); }
+	if (flash_successful)
+	{
+		http_server_monitor_send_message(HTTP_MSG_OTA_UPDATE_SUCCESSFUL);
+	}
+	else
+	{
+		http_server_monitor_send_message(HTTP_MSG_OTA_UPDATE_FAILED);
+	}
 
 	return ESP_OK;
 }
@@ -330,7 +337,6 @@ static esp_err_t http_server_get_dht_sensor_readings_json_handler(httpd_req_t *r
 	httpd_resp_send(req, dhtSensorJSON, strlen(dhtSensorJSON));
 
 	return ESP_OK;
-	
 }
 
 /**
@@ -369,7 +375,7 @@ static esp_err_t http_server_wifi_connect_json_handler(httpd_req_t *req)
 	}
 
 	// Update the Wifi networks configuration and let the wifi application know
-	wifi_config_t* wifi_config = wifi_app_get_wifi_config();
+	wifi_config_t *wifi_config = wifi_app_get_wifi_config();
 	memset(wifi_config, 0x00, sizeof(wifi_config_t));
 	memcpy(wifi_config->sta.ssid, ssid_str, len_ssid);
 	memcpy(wifi_config->sta.password, pass_str, len_pass);
@@ -400,6 +406,42 @@ static esp_err_t http_server_wifi_connect_status_json_handler(httpd_req_t *req)
 	return ESP_OK;
 }
 
+/**
+ * wifiConnectInfo.json handler updates the web page with connection information.
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t http_server_get_wifi_connect_info_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/wifiConnectInfo.json requested");
+
+	char ipInfoJSON[200];
+	memset(ipInfoJSON, 0, sizeof(ipInfoJSON));
+
+	char ip[IP4ADDR_STRLEN_MAX];
+	char netmask[IP4ADDR_STRLEN_MAX];
+	char gw[IP4ADDR_STRLEN_MAX];
+
+	if (g_wifi_connect_status == HTTP_WIFI_STATUS_CONNECT_SUCCESS)
+	{
+		wifi_ap_record_t wifi_data;
+		ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&wifi_data));
+		char *ssid = (char *)wifi_data.ssid;
+
+		esp_netif_ip_info_t ip_info;
+		ESP_ERROR_CHECK(esp_netif_get_ip_info(esp_netif_sta, &ip_info));
+		esp_ip4addr_ntoa(&ip_info.ip, ip, IP4ADDR_STRLEN_MAX);
+		esp_ip4addr_ntoa(&ip_info.netmask, netmask, IP4ADDR_STRLEN_MAX);
+		esp_ip4addr_ntoa(&ip_info.gw, gw, IP4ADDR_STRLEN_MAX);
+
+		sprintf(ipInfoJSON, "{\"ip\":\"%s\",\"netmask\":\"%s\",\"gw\":\"%s\",\"ap\":\"%s\"}", ip, netmask, gw, ssid);
+	}
+
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_send(req, ipInfoJSON, strlen(ipInfoJSON));
+
+	return ESP_OK;
+}
 
 /**
  * Sets up the default httpd server configuration.
@@ -433,9 +475,9 @@ static httpd_handle_t http_server_configure(void)
 	config.send_wait_timeout = 10;
 
 	ESP_LOGI(TAG,
-			"http_server_configure: Starting server on port: '%d' with task priority: '%d'",
-			config.server_port,
-			config.task_priority);
+			 "http_server_configure: Starting server on port: '%d' with task priority: '%d'",
+			 config.server_port,
+			 config.task_priority);
 
 	// Start the httpd server
 	if (httpd_start(&http_server_handle, &config) == ESP_OK)
@@ -444,93 +486,91 @@ static httpd_handle_t http_server_configure(void)
 
 		// register query handler
 		httpd_uri_t jquery_js = {
-				.uri = "/jquery-3.3.1.min.js",
-				.method = HTTP_GET,
-				.handler = http_server_jquery_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/jquery-3.3.1.min.js",
+			.method = HTTP_GET,
+			.handler = http_server_jquery_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &jquery_js);
 
 		// register index.html handler
 		httpd_uri_t index_html = {
-				.uri = "/",
-				.method = HTTP_GET,
-				.handler = http_server_index_html_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/",
+			.method = HTTP_GET,
+			.handler = http_server_index_html_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &index_html);
 
 		// register app.css handler
 		httpd_uri_t app_css = {
-				.uri = "/app.css",
-				.method = HTTP_GET,
-				.handler = http_server_app_css_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/app.css",
+			.method = HTTP_GET,
+			.handler = http_server_app_css_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &app_css);
 
 		// register app.js handler
 		httpd_uri_t app_js = {
-				.uri = "/app.js",
-				.method = HTTP_GET,
-				.handler = http_server_app_js_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/app.js",
+			.method = HTTP_GET,
+			.handler = http_server_app_js_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &app_js);
 
 		// register favicon.ico handler
 		httpd_uri_t favicon_ico = {
-				.uri = "/favicon.ico",
-				.method = HTTP_GET,
-				.handler = http_server_favicon_ico_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/favicon.ico",
+			.method = HTTP_GET,
+			.handler = http_server_favicon_ico_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &favicon_ico);
 
 		// register OTAupdate handler
 		httpd_uri_t OTA_update = {
-				.uri = "/OTAupdate",
-				.method = HTTP_POST,
-				.handler = http_server_OTA_update_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/OTAupdate",
+			.method = HTTP_POST,
+			.handler = http_server_OTA_update_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &OTA_update);
 
 		// register OTAstatus handler
 		httpd_uri_t OTA_status = {
-				.uri = "/OTAstatus",
-				.method = HTTP_POST,
-				.handler = http_server_OTA_status_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/OTAstatus",
+			.method = HTTP_POST,
+			.handler = http_server_OTA_status_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &OTA_status);
 
 		// register dhtSensor.json handler
 		httpd_uri_t dht_sensor_json = {
-				.uri = "/dhtSensor.json",
-				.method = HTTP_GET,
-				.handler = http_server_get_dht_sensor_readings_json_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/dhtSensor.json",
+			.method = HTTP_GET,
+			.handler = http_server_get_dht_sensor_readings_json_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &dht_sensor_json);
 
 		// register wifiConnect.json handler
 		httpd_uri_t wifi_connect_json = {
-				.uri = "/wifiConnect.json",
-				.method = HTTP_POST,
-				.handler = http_server_wifi_connect_json_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/wifiConnect.json",
+			.method = HTTP_POST,
+			.handler = http_server_wifi_connect_json_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &wifi_connect_json);
 
 		// register wifiConnectStatus.json handler
 		httpd_uri_t wifi_connect_status_json = {
-				.uri = "/wifiConnectStatus",
-				.method = HTTP_POST,
-				.handler = http_server_wifi_connect_status_json_handler,
-				.user_ctx = NULL
-		};
+			.uri = "/wifiConnectStatus",
+			.method = HTTP_GET,
+			.handler = http_server_wifi_connect_status_json_handler,
+			.user_ctx = NULL};
 		httpd_register_uri_handler(http_server_handle, &wifi_connect_status_json);
+
+		// register wifiConnectInfo.json handler
+		httpd_uri_t wifi_connect_info_json = {
+			.uri = "/wifiConnectInfo.json",
+			.method = HTTP_GET,
+			.handler = http_server_get_wifi_connect_info_json_handler,
+			.user_ctx = NULL};
+		httpd_register_uri_handler(http_server_handle, &wifi_connect_info_json);
 
 		return http_server_handle;
 	}

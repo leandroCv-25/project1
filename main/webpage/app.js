@@ -160,7 +160,7 @@ function otaRebootTimer()
  {
      var xhr = new XMLHttpRequest();
      var requestURL = "/wifiConnectStatus";
-     xhr.open('POST', requestURL, false);
+     xhr.open('GET', requestURL, false);
      xhr.send('wifi_connect_status');
      
      if (xhr.readyState == 4 && xhr.status == 200)
@@ -244,3 +244,41 @@ function checkCredentials()
 	}
 }
 
+/**
+ * Shows the WiFi password if the box is checked.
+ */
+ function showPassword()
+ {
+     var x = document.getElementById("connect_pass");
+     if (x.type === "password")
+     {
+         x.type = "text";
+     }
+     else
+     {
+         x.type = "password";
+     }
+ }
+ 
+ /**
+  * Gets the connection information for displaying on the web page.
+  */
+ function getConnectInfo()
+ {
+     $.getJSON('/wifiConnectInfo.json', function(data)
+     {
+         $("#connected_ap_label").html("Connected to: ");
+         $("#connected_ap").text(data["ap"]);
+         
+         $("#ip_address_label").html("IP Address: ");
+         $("#wifi_connect_ip").text(data["ip"]);
+         
+         $("#netmask_label").html("Netmask: ");
+         $("#wifi_connect_netmask").text(data["netmask"]);
+         
+         $("#gateway_label").html("Gateway: ");
+         $("#wifi_connect_gw").text(data["gw"]);
+         
+         document.getElementById('disconnect_wifi').style.display = 'block';
+     });
+ }
