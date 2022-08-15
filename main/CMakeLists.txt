@@ -1,4 +1,4 @@
-idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c app_nvs.c wifi_reset_button.c
+idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c app_nvs.c wifi_reset_button.c sntp_time_sync.c
                     INCLUDE_DIRS "."
                     EMBED_FILES 
                     webpage/app.css 

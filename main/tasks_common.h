@@ -32,5 +32,10 @@
 #define DHT_TASK_PRIORITY					5
 #define DHT_TASK_CORE_ID					1
 
+// SNTP Time Sync task
+#define SNTP_TIME_SYNC_TASK_STACK_SIZE		4096
+#define SNTP_TIME_SYNC_TASK_PRIORITY		4
+#define SNTP_TIME_SYNC_TASK_CORE_ID			1
+
 
 #endif /* MAIN_TASKS_COMMON_H_ */

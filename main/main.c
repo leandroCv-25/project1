@@ -2,11 +2,21 @@
  *Aplication entry point
  */
 
+#include "esp_log.h"
 #include "nvs_flash.h"
 
 #include "DHT_task.h"
+#include "sntp_time_sync.h"
 #include "wifi_app.h"
 #include "wifi_reset_button.h"
+
+static const char TAG[] = "main";
+
+void wifi_application_connected_events(void)
+{
+	ESP_LOGI(TAG, "WiFi Application Connected!!");
+	sntp_time_sync_task_start();
+}
 
 void app_main(void)
 {
@@ -28,4 +38,7 @@ void app_main(void)
 
     // Start DHT22 Sensor task
     DHT_task_start();
+
+    // Set connected event callback
+	wifi_app_set_callback(&wifi_application_connected_events);
 }

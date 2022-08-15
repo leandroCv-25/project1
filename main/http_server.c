@@ -6,6 +6,7 @@
 
 #include "DHT_task.h"
 #include "http_server.h"
+#include "sntp_time_sync.h"
 #include "tasks_common.h"
 #include "wifi_app.h"
 
@@ -17,6 +18,9 @@ static int g_wifi_connect_status = NONE;
 
 // Firmware update status
 static int g_fw_update_status = OTA_UPDATE_PENDING;
+
+// Local Time status
+static bool g_is_local_time_set = false;
 
 // HTTP server task handle
 static httpd_handle_t http_server_handle = NULL;
@@ -458,6 +462,29 @@ static esp_err_t http_server_wifi_disconnect_json_handler(httpd_req_t *req)
 }
 
 /**
+ * localTime.json handler responds by sending the local time.
+ * @param req HTTP request for which the uri needs to be handled.
+ * @return ESP_OK
+ */
+static esp_err_t http_server_get_local_time_json_handler(httpd_req_t *req)
+{
+	ESP_LOGI(TAG, "/localTime.json requested");
+
+	char localTimeJSON[100] = {0};
+
+	if (g_is_local_time_set)
+	{
+		sprintf(localTimeJSON, "{\"time\":\"%s\"}", sntp_time_sync_get_time());
+	}
+
+	httpd_resp_set_type(req, "application/json");
+	httpd_resp_send(req, localTimeJSON, strlen(localTimeJSON));
+
+	return ESP_OK;
+}
+
+
+/**
  * Sets up the default httpd server configuration.
  * @return http server instance handle if successful, NULL otherwise.
  */
@@ -594,6 +621,17 @@ static httpd_handle_t http_server_configure(void)
 				.user_ctx = NULL
 		};
 		httpd_register_uri_handler(http_server_handle, &wifi_disconnect_json);
+
+		return http_server_handle;
+
+		// register localTime.json handler
+		httpd_uri_t local_time_json = {
+				.uri = "/localTime.json",
+				.method = HTTP_GET,
+				.handler = http_server_get_local_time_json_handler,
+				.user_ctx = NULL
+		};
+		httpd_register_uri_handler(http_server_handle, &local_time_json);
 
 		return http_server_handle;
 	}

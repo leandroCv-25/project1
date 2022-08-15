@@ -44,12 +44,7 @@ h4 {
 	color: #1d3557;
 }
 
-#temperature_reading {
-	display:inline;
-	color: #1d3557;
-}
-
-#humidity_reading {
+#temperature_reading, #local_time, #humidity_reading {
 	display:inline;
 	color: #1d3557;
 }
