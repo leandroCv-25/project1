@@ -10,6 +10,7 @@ var wifiConnectInterval = null;
  * Initialize functions here.
  */
 $(document).ready(function(){
+    getSSID();
 	getUpdateStatus();
     startDHTSensorInterval();
     startLocalTimeInterval();
@@ -322,3 +323,14 @@ function getLocalTime()
 		$("#local_time").text(data["time"]);
 	});
 }
+
+/**
+ * Gets the ESP32's access point SSID for displaying on the web page.
+ */
+ function getSSID()
+ {
+     $.getJSON('/apSSID.json', function(data) {
+         $("#ap_ssid").text(data["ssid"]);
+     });
+ }
+ 
