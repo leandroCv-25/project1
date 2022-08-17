@@ -1,4 +1,13 @@
-idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c app_nvs.c wifi_reset_button.c sntp_time_sync.c
+idf_component_register(SRCS 
+                    rgb_led.c 
+                    main.c 
+                    wifi_app.c 
+                    http_server.c 
+                    DHT_task.c 
+                    app_nvs.c 
+                    wifi_reset_button.c
+                    sntp_time_sync.c
+                    aws_iot.c
                     INCLUDE_DIRS "."
                     EMBED_FILES 
                     webpage/app.css 
@@ -7,3 +16,7 @@ idf_component_register(SRCS rgb_led.c main.c wifi_app.c http_server.c DHT_task.c
                     webpage/index.html 
                     webpage/jquery-3.3.1.min.js
                     )
+
+target_add_binary_data(${COMPONENT_TARGET} "certs/aws_root_ca_pem" TEXT)
+target_add_binary_data(${COMPONENT_TARGET} "certs/certificate_pem_crt" TEXT)
+target_add_binary_data(${COMPONENT_TARGET} "certs/private_pem_key" TEXT)
